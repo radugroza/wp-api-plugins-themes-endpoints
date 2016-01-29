@@ -87,21 +87,10 @@ class WP_REST_Plugins_Controller extends WP_REST_Controller {
 
 	public function get_item( $request ) {
 		$slug   = $request['slug'];
-		$plugin = null;
+		$plugin = $this->get_plugin( $slug );
 
-		require_once ABSPATH . '/wp-admin/includes/plugin.php';
-		$plugins = get_plugins();
-
-		foreach ( $plugins as $active_plugin ) {
-			$sanitized_title = sanitize_title( $active_plugin['Name'] );
-			if ( $slug === $sanitized_title ) {
-				$plugin = $active_plugin;
-				break;
-			}
-		}
-
-		if ( ! $plugin ) {
-			return new WP_Error( 'rest_post_invalid_id', __( 'Invalid post id.' ), array( 'status' => 404 ) );
+		if ( null === $plugin ) {
+			return new WP_Error( 'rest_plugin_invalid_slug', sprintf( __( 'Plugin with slug %s not found.' ), $slug ), array( 'status' => 404 ) );
 		}
 
 		$data     = $this->prepare_item_for_response( $plugin, $request );
@@ -120,7 +109,7 @@ class WP_REST_Plugins_Controller extends WP_REST_Controller {
 	public function delete_item_permissions_check( $request ) {
 
 		if ( ! current_user_can( 'delete_plugins' ) ) {
-			return new WP_Error( 'rest_forbidden', __( 'Sorry, you cannot delete this plugin' ), array( 'status' => rest_authorization_required_code() ) );
+			return new WP_Error( 'rest_forbidden', __( 'Sorry, you cannot delete plugins' ), array( 'status' => rest_authorization_required_code() ) );
 		}
 
 		return true;
@@ -135,6 +124,28 @@ class WP_REST_Plugins_Controller extends WP_REST_Controller {
 	 */
 	public function delete_item( $request ) {
 
+		$slug = $request['slug'];
+
+		$plugin = $this->get_plugin( $slug );
+
+		if ( null === $plugin ) {
+			return new WP_Error( 'rest_plugin_invalid_slug', sprintf( __( 'Plugin with slug %s not found.' ), $slug ), array( 'status' => 404 ) );
+		}
+
+		/*
+		 * TODO: we cannot directly use the delete_plugins() function because that has the possibility of terminating the script with a nice exit() call
+		 *
+		 * my initial stab at this would be:
+		 *
+		 * ob_start()
+		 * request_filesystem_credentials() - if this is false => WP_Error (code =? message =?)
+		 * if ( ! WP_filesyste( $credentials ) ) => WP_Error
+		 *
+		 * at this point, delete_plugins() can be called
+		 *
+		 */
+
+
 	}
 
 	public function get_item_schema() {
@@ -143,6 +154,10 @@ class WP_REST_Plugins_Controller extends WP_REST_Controller {
 			'title'      => 'plugin',
 			'type'       => 'object',
 			'properties' => array(
+				'slug'        => array(
+					'description' => __( 'Identifier for the plugin' ),
+					'type'        => 'string',
+				),
 				'name'        => array(
 					'description' => __( 'The title for the resource.' ),
 					'type'        => 'string',
@@ -200,6 +215,7 @@ class WP_REST_Plugins_Controller extends WP_REST_Controller {
 
 	public function prepare_item_for_response( $plugin, $request ) {
 		$data = array(
+			'slug'        => $plugin['slug'],
 			'name'        => $plugin['Name'],
 			'plugin_uri'  => $plugin['PluginURI'],
 			'version'     => $plugin['Version'],
@@ -214,5 +230,33 @@ class WP_REST_Plugins_Controller extends WP_REST_Controller {
 		);
 
 		return $data;
+	}
+
+	/**
+	 * Find a plugin by slug
+	 *
+	 * @param string $slug
+	 * @return array|null
+	 */
+	protected function get_plugin( $slug ) {
+
+		require_once ABSPATH . '/wp-admin/includes/plugin.php';
+		$plugins = get_plugins();
+
+		foreach ( $plugins as $_path => $plugin ) {
+			$sanitized_title = sanitize_title( $plugin['Name'] );
+			if ( $slug === $sanitized_title ) {
+
+				/* we need to store the path of the plugin */
+				$plugin['_path'] = $_path;
+
+				/* include the slug in the response, as this is the ID (for now - ?) for get / delete / update */
+				$plugin['slug'] = $slug;
+
+				return $plugin;
+			}
+		}
+
+		return null;
 	}
 }

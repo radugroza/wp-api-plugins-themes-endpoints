@@ -11,7 +11,7 @@ class WP_Test_REST_Themes_Controller extends WP_Test_REST_Controller_TestCase {
 	public function test_get_items_without_permissions() {
 		wp_set_current_user( 0 );
 
-		$request = new WP_REST_Request( 'GET', '/wp/v2/plugins' );
+		$request = new WP_REST_Request( 'GET', '/wp/v2/themes' );
 
 		$response = $this->server->dispatch( $request );
 
