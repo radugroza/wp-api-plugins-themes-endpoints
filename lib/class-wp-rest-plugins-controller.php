@@ -145,7 +145,6 @@ class WP_REST_Plugins_Controller extends WP_REST_Controller {
 		 *
 		 */
 
-
 	}
 
 	public function get_item_schema() {
@@ -243,11 +242,9 @@ class WP_REST_Plugins_Controller extends WP_REST_Controller {
 		require_once ABSPATH . '/wp-admin/includes/plugin.php';
 
 		foreach ( $this->get_plugins() as $_path => $plugin ) {
-
 			if ( $slug === $plugin['slug'] ) {
 				return $plugin;
 			}
-
 		}
 
 		return null;
@@ -262,7 +259,6 @@ class WP_REST_Plugins_Controller extends WP_REST_Controller {
 		$_plugins = array();
 
 		foreach ( get_plugins() as $_path => $plugin ) {
-
 			$plugin['_path']    = $_path;
 			$plugin['slug']     = $this->get_slug( $plugin );
 			$_plugins[ $_path ] = $plugin;
