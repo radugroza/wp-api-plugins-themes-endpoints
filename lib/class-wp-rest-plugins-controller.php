@@ -57,7 +57,7 @@ class WP_REST_Plugins_Controller extends WP_REST_Controller {
 		$data = array();
 
 		require_once ABSPATH . '/wp-admin/includes/plugin.php';
-		foreach ( get_plugins() as $obj ) {
+		foreach ( $this->get_plugins() as $obj ) {
 			$plugin = $this->prepare_item_for_response( $obj, $request );
 			if ( is_wp_error( $plugin ) ) {
 				continue;
@@ -241,22 +241,45 @@ class WP_REST_Plugins_Controller extends WP_REST_Controller {
 	protected function get_plugin( $slug ) {
 
 		require_once ABSPATH . '/wp-admin/includes/plugin.php';
-		$plugins = get_plugins();
 
-		foreach ( $plugins as $_path => $plugin ) {
-			$sanitized_title = sanitize_title( $plugin['Name'] );
-			if ( $slug === $sanitized_title ) {
+		foreach ( $this->get_plugins() as $_path => $plugin ) {
 
-				/* we need to store the path of the plugin */
-				$plugin['_path'] = $_path;
-
-				/* include the slug in the response, as this is the ID (for now - ?) for get / delete / update */
-				$plugin['slug'] = $slug;
-
+			if ( $slug === $plugin['slug'] ) {
 				return $plugin;
 			}
+
 		}
 
 		return null;
+	}
+
+	/**
+	 * Fetches the list of plugins, with additional slug and _path fields added to each item
+	 *
+	 * @return array
+	 */
+	protected function get_plugins() {
+		$_plugins = array();
+
+		foreach ( get_plugins() as $_path => $plugin ) {
+
+			$plugin['_path']    = $_path;
+			$plugin['slug']     = $this->get_slug( $plugin );
+			$_plugins[ $_path ] = $plugin;
+		}
+
+		return $_plugins;
+	}
+
+	/**
+	 * Get the slug (identifier) for a plugin based on its name
+	 *
+	 * @param array $plugin
+	 * @return string
+	 */
+	protected function get_slug( $plugin ) {
+
+		return sanitize_title( $plugin['Name'] );
+
 	}
 }
